@@ -3,6 +3,7 @@ package com.crm.dashboard.service;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.crm.dashboard.model.User;
 import com.crm.dashboard.repository.UserRepository;
@@ -20,7 +21,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getUserById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        return userRepository.findById(id)
+                             .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @Override
@@ -38,7 +40,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
+
 }
