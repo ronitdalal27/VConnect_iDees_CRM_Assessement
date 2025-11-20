@@ -6,4 +6,6 @@ import com.crm.dashboard.model.Contact;
 
 public interface ContactRepository extends JpaRepository<Contact, Long> {
     List<Contact> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
+    void deleteByUserId(Long userId);
+    List<Contact> findByUserId(Long userId); 
 }

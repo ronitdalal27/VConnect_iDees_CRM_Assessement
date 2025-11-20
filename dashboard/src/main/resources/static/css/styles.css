@@ -1,25 +1,178 @@
-body {
-  background-color: #121212;
-  color: #ffffff;
+/* ----------------------------------------------------------
+   Pastel Modern CRM UI
+   Light background + pastel card accents
+   100% compatible with your existing JS
+-----------------------------------------------------------*/
+
+/* Base font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+* {
+  font-family: "Poppins", sans-serif;
+  box-sizing: border-box;
 }
 
+/* Page background */
+body {
+  background: #c9a2b8;
+  color: #333;
+}
+
+/* Sidebar Navigation (Clean pastel look) */
 nav {
   min-height: 100vh;
-  background-color: #000000;
-  border-right: 1px solid #2a2a2a;
+  width: 240px;
+  background: #f3a2a5;
+  border-right: 2px solid #eef2f5;
+  padding: 20px;
+}
+
+.nav-link {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #333 !important;
 }
 
 .nav-link:hover {
-  background-color: #343a40;
-  border-radius: 5px;
+  background: #e6f4ff;
+  color: #0077cc !important;
 }
 
+/* Main content */
+.main-content {
+  margin-left: 40px;
+  padding: 20px;
+}
+
+/* Form controls */
+.form-control {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.form-control:focus {
+  border-color: #74b9ff;
+  box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
+}
+
+/* Buttons */
+.btn-primary {
+  background: #74b9ff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: #4fa3f7;
+}
+
+.btn-warning {
+  background: #ffd6a5;
+  border: none;
+  font-weight: 600;
+  color: #805500;
+}
+.btn-warning:hover {
+  background: #ffca88;
+}
+
+.btn-danger {
+  background: #ffadad;
+  border: none;
+  font-weight: 600;
+}
+.btn-danger:hover {
+  background: #ff8f8f;
+}
+
+/* Cards – pastel themed */
 .card {
   border: none;
-  border-radius: 10px;
+  border-radius: 16px;
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.06);
+  padding: 15px;
 }
 
-.card .card-text {
-  font-size: 24px;
+.card.mint { background: #a8e6cf; }
+.card.sky  { background: #a0c4ff; }
+.card.peach { background: #ffd6a5; }
+.card.lavender { background: #cdb4db; }
+
+.card-title {
+  font-weight: 700;
+}
+
+.card-text {
+  font-size: 26px;
   font-weight: bold;
+}
+
+/* Table styling */
+.table {
+  background: #f1f3bb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table thead {
+  background: #f1f3bb;
+}
+
+.table th {
+  font-weight: 600;
+}
+
+.table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+/* Login Page */
+.login-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0px 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+.login-image {
+  border-radius: 12px;
+}
+
+/* Lists */
+.list-group-item {
+  border: none;
+  background: #fff;
+  border-radius: 8px !important;
+  margin-bottom: 6px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Search box */
+#searchBox {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* Responsive sidebar */
+@media (max-width: 992px) {
+  nav {
+    position: relative;
+    width: 100%;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 2px solid #eef2f5;
+  }
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+.card.lemon {
+  background: #fff9c4; /* soft lemon yellow */
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.06);
 }

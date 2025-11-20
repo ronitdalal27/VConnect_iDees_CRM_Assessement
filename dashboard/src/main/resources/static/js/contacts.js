@@ -43,15 +43,29 @@ contactForm.onsubmit = async (e) => {
     const method = id ? "PUT" : "POST";
     const url = id ? `/api/contacts/${id}` : "/api/contacts";
 
-    await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contact)
-    });
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(contact)
+        });
 
-    contactForm.reset();
-    document.getElementById("contactId").value = "";
-    loadContacts();
+        // NEW PART — show error if userId does not exist
+        if (!response.ok) {
+            const errorData = await response.json();
+            alert(errorData.message); // show backend message
+            return;
+        }
+
+        // Success
+        contactForm.reset();
+        document.getElementById("contactId").value = "";
+        loadContacts();
+
+    } catch (err) {
+        alert("Server error while creating contact.");
+        console.error(err);
+    }
 };
 
 async function loadContacts() {

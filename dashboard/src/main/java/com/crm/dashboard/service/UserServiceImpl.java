@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.crm.dashboard.model.User;
+import com.crm.dashboard.repository.ContactRepository;
 import com.crm.dashboard.repository.UserRepository;
 
 @Service
@@ -13,6 +14,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ContactRepository contactRepository;
 
     @Override
     public List<User> getAllUsers() {
@@ -42,6 +46,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Long id) {
+        // ensure user exists (keeps behavior consistent with other methods)
+        User user = getUserById(id);
+
+        // delete contacts that belong to this user first
+        contactRepository.deleteByUserId(id);
+
+        // then delete the user
         userRepository.deleteById(id);
     }
 

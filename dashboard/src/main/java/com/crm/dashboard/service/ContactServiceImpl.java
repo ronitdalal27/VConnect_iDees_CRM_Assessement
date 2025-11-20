@@ -3,6 +3,8 @@ package com.crm.dashboard.service;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.crm.dashboard.exception.UserNotFoundException;
 import com.crm.dashboard.model.Contact;
 import com.crm.dashboard.model.User;
 import com.crm.dashboard.repository.ContactRepository;
@@ -31,7 +33,7 @@ public class ContactServiceImpl implements ContactService {
     public Contact createContact(Contact contact) {
         Long userId = contact.getUser().getId();
         User user = userRepository.findById(userId)
-                                  .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+                                  .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " does not exist"));
         contact.setUser(user);
         return contactRepository.save(contact);
     }
@@ -45,7 +47,7 @@ public class ContactServiceImpl implements ContactService {
 
         Long userId = contactDetails.getUser().getId();
         User user = userRepository.findById(userId)
-                                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+                                .orElseThrow(() -> new UserNotFoundException("User with ID " + userId + " does not exist"));
         existing.setUser(user);
 
         return contactRepository.save(existing);
