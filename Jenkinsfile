@@ -1,9 +1,9 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "ronit/dashboard-app:ci"
+        WORK_DIR = "dashboard"
     }
 
     stages {
@@ -14,21 +14,50 @@ pipeline {
             }
         }
 
+        stage('Install Maven') {
+            steps {
+                sh '''
+                    if ! command -v mvn &> /dev/null
+                    then
+                        echo "Installing Maven..."
+                        apt-get update
+                        apt-get install -y maven
+                    fi
+                    mvn -v
+                '''
+            }
+        }
+
         stage('Build JAR') {
             steps {
-                sh 'cd dashboard && mvn clean package -DskipTests'
+                sh '''
+                    cd ${WORK_DIR}
+                    mvn clean package -DskipTests
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ronit/dashboard-app:ci dashboard'
+                sh '''
+                    docker build -t ${DOCKER_IMAGE} ${WORK_DIR}
+                '''
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                sh '''
+                    docker rm -f ci-test || true
+                '''
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                sh 'docker run -d -p 8080:8080 --name ci-test ronit/dashboard-app:ci'
+                sh '''
+                    docker run -d -p 8080:8080 --name ci-test ${DOCKER_IMAGE}
+                '''
             }
         }
     }
