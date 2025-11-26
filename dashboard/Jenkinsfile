@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // This will use the Jenkins job's Git config
+                checkout scm
+            }
+        }
+
+        stage('Build with Maven Wrapper') {
+            steps {
+                sh './mvnw -B clean package -DskipTests'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build SUCCESS ✅'
+        }
+        failure {
+            echo 'Build FAILED ❌'
+        }
+    }
+}
