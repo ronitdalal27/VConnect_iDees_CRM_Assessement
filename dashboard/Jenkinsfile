@@ -2,26 +2,29 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+
+        stage('Clone Repo') {
             steps {
-                // This will use the Jenkins job's Git config
-                checkout scm
+                git branch: 'master', url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
             }
         }
 
-        stage('Build with Maven Wrapper') {
+        stage('Build JAR') {
             steps {
-                sh './mvnw -B clean package -DskipTests'
+                sh 'mvn clean package -DskipTests'
             }
         }
-    }
 
-    post {
-        success {
-            echo 'Build SUCCESS ✅'
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ronit/dashboard-app:ci .'
+            }
         }
-        failure {
-            echo 'Build FAILED ❌'
+
+        stage('Run Docker Container') {
+            steps {
+                sh 'docker run -d -p 8080:8080 --name ci-test ronit/dashboard-app:ci'
+            }
         }
     }
 }
