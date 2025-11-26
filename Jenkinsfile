@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "ronit/dashboard-app:ci"
-        WORK_DIR = "dashboard"
     }
 
     stages {
@@ -16,35 +15,31 @@ pipeline {
 
         stage('Build JAR') {
             steps {
-                sh """
-                    docker run --rm \
-                    -v \$PWD/${WORK_DIR}:/app \
-                    -w /app \
-                    maven:3.9.6-eclipse-temurin-17 \
+                sh '''
+                    docker run --rm ^
+                    -v "$(pwd)":/workspace ^
+                    -w /workspace/dashboard ^
+                    maven:3.9.6-eclipse-temurin-17 ^
                     mvn clean package -DskipTests
-                """
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE} ${WORK_DIR}"
+                sh 'docker build -t ${DOCKER_IMAGE} dashboard'
             }
         }
 
         stage('Stop Old Container') {
             steps {
-                sh "docker rm -f ci-test || true"
+                sh 'docker rm -f ci-test || true'
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                sh """
-                    docker run -d -p 8080:8080 \
-                    --name ci-test \
-                    ${DOCKER_IMAGE}
-                """
+                sh 'docker run -d -p 8080:8080 --name ci-test ${DOCKER_IMAGE}'
             }
         }
     }
