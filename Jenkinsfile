@@ -17,7 +17,10 @@ pipeline {
         stage('Build JAR') {
             steps {
                 sh """
-                    cd ${WORK_DIR}
+                    docker run --rm \
+                    -v \$PWD/${WORK_DIR}:/app \
+                    -w /app \
+                    maven:3.9.6-eclipse-temurin-17 \
                     mvn clean package -DskipTests
                 """
             }
@@ -25,24 +28,22 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                    docker build -t ${DOCKER_IMAGE} ${WORK_DIR}
-                """
+                sh "docker build -t ${DOCKER_IMAGE} ${WORK_DIR}"
             }
         }
 
         stage('Stop Old Container') {
             steps {
-                sh """
-                    docker rm -f ci-test || true
-                """
+                sh "docker rm -f ci-test || true"
             }
         }
 
         stage('Run Docker Container') {
             steps {
                 sh """
-                    docker run -d -p 8080:8080 --name ci-test ${DOCKER_IMAGE}
+                    docker run -d -p 8080:8080 \
+                    --name ci-test \
+                    ${DOCKER_IMAGE}
                 """
             }
         }
