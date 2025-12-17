@@ -2,24 +2,26 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "ronit/dashboard-app:ci"
+        APP_NAME = "dashboard"
+        IMAGE_TAG = "v1"
+        REGISTRY_URL = "registry.college.local"   // ask faculty for exact URL
+        REGISTRY_IMAGE = "${REGISTRY_URL}/dashboard:${IMAGE_TAG}"
+        K8S_NAMESPACE = "2401036-dashboard"
     }
 
     stages {
 
-        stage('Clone Repo') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'master', url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
+                git branch: 'master',
+                    url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
             }
         }
 
-        stage('Build JAR') {
+        stage('Build Application (Maven)') {
             steps {
                 sh '''
-                    docker run --rm ^
-                    -v "$(pwd)":/workspace ^
-                    -w /workspace/dashboard ^
-                    maven:3.9.6-eclipse-temurin-17 ^
+                    cd app
                     mvn clean package -DskipTests
                 '''
             }
@@ -27,20 +29,42 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${DOCKER_IMAGE} dashboard'
+                sh '''
+                    docker build -t $REGISTRY_IMAGE .
+                '''
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Push Image to Registry') {
             steps {
-                sh 'docker rm -f ci-test || true'
+                withCredentials([usernamePassword(
+                    credentialsId: 'registry-creds', // confirm ID with faculty
+                    usernameVariable: 'REG_USER',
+                    passwordVariable: 'REG_PASS'
+                )]) {
+                    sh '''
+                        docker login $REGISTRY_URL -u $REG_USER -p $REG_PASS
+                        docker push $REGISTRY_IMAGE
+                    '''
+                }
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Deploy to Kubernetes') {
             steps {
-                sh 'docker run -d -p 8080:8080 --name ci-test ${DOCKER_IMAGE}'
+                sh '''
+                    kubectl apply -n $K8S_NAMESPACE -f k8s/
+                '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ CI/CD Pipeline completed successfully"
+        }
+        failure {
+            echo "❌ CI/CD Pipeline failed"
         }
     }
 }
