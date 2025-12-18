@@ -6,7 +6,6 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-
   - name: dind
     image: docker:dind
     securityContext:
@@ -43,10 +42,8 @@ spec:
             steps {
                 container('dind') {
                     sh '''
-                        dockerd-entrypoint.sh &
-                        sleep 20
+                        docker info
                         docker build -t $IMAGE_NAME .
-                        docker images
                     '''
                 }
             }
@@ -61,8 +58,7 @@ spec:
                         passwordVariable: 'NEXUS_PASS'
                     )]) {
                         sh '''
-                            docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                              -u $NEXUS_USER -p $NEXUS_PASS
+                            docker login http://$REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
                             docker push $IMAGE_NAME
                         '''
                     }
