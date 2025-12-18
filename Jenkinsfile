@@ -31,21 +31,24 @@ pipeline {
         }
 
         stage('Push Image to Nexus') {
-            steps {
-                container('dind') {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USER',
-                        passwordVariable: 'NEXUS_PASS'
-                    )]) {
-                        sh '''
-                            docker login $REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
-                            docker push $IMAGE_NAME
-                        '''
-                    }
-                }
+    steps {
+        container('dind') {
+            withCredentials([usernamePassword(
+                credentialsId: 'nexus-credentials',
+                usernameVariable: 'NEXUS_USER',
+                passwordVariable: 'NEXUS_PASS'
+            )]) {
+                sh '''
+                    docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                      -u $NEXUS_USER -p $NEXUS_PASS
+
+                    docker push $IMAGE_NAME
+                '''
             }
         }
+    }
+}
+
 
         stage('Deploy to Kubernetes') {
             steps {
