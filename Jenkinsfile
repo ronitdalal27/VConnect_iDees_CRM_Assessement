@@ -5,12 +5,7 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
-  volumes:
-    - name: workspace-volume
-      emptyDir: {}
-
   containers:
-
   - name: dind
     image: docker:dind
     args:
@@ -21,9 +16,11 @@ spec:
     env:
       - name: DOCKER_TLS_CERTDIR
         value: ""
-    volumeMounts:
-      - name: workspace-volume
-        mountPath: /home/jenkins/agent
+
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command: ["cat"]
+    tty: true
 '''
         }
     }
@@ -34,6 +31,7 @@ spec:
         REGISTRY_URL  = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
         REGISTRY_REPO = "2401036-dashboard"
         IMAGE_NAME    = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
+        K8S_NAMESPACE = "2401036-dashboard"
     }
 
     stages {
@@ -49,8 +47,9 @@ spec:
             steps {
                 container('dind') {
                     sh '''
-                        dockerd-entrypoint.sh &
+                        dockerd-entrypoint.sh & 
                         sleep 20
+                        docker info
                         docker build -t $IMAGE_NAME .
                         docker images
                     '''
@@ -76,22 +75,24 @@ spec:
             }
         }
 
-        stage('CD Ready (Kubernetes Manifests Present)') {
+        stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                    echo "Kubernetes deployment YAMLs are available in repository."
-                    ls -l k8s || true
-                '''
+                container('kubectl') {
+                    sh '''
+                        kubectl apply -n $K8S_NAMESPACE -f k8s/
+                        kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo "✅ CI pipeline successful: Image built and pushed to Nexus"
+            echo "✅ CI/CD Pipeline completed successfully"
         }
         failure {
-            echo "❌ CI pipeline failed"
+            echo "❌ CI/CD Pipeline failed"
         }
     }
 }
