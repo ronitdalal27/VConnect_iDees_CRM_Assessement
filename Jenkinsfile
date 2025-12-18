@@ -1,5 +1,25 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    env:
+      - name: DOCKER_TLS_CERTDIR
+        value: ""
+    args:
+      - "--storage-driver=overlay2"
+      - "--insecure-registry=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+'''
+        }
+    }
 
     environment {
         APP_NAME      = "dashboard"
@@ -21,24 +41,31 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $IMAGE_NAME .
-                '''
+                container('dind') {
+                    sh '''
+                        dockerd-entrypoint.sh &
+                        sleep 20
+                        docker build -t $IMAGE_NAME .
+                        docker images
+                    '''
+                }
             }
         }
 
         stage('Push Image to Nexus') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'nexus-credentials',
-                    usernameVariable: 'NEXUS_USER',
-                    passwordVariable: 'NEXUS_PASS'
-                )]) {
-                    sh '''
-                        docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                          -u $NEXUS_USER -p $NEXUS_PASS
-                        docker push $IMAGE_NAME
-                    '''
+                container('dind') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASS'
+                    )]) {
+                        sh '''
+                            docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                              -u $NEXUS_USER -p $NEXUS_PASS
+                            docker push $IMAGE_NAME
+                        '''
+                    }
                 }
             }
         }
