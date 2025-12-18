@@ -4,8 +4,9 @@ pipeline {
     environment {
         APP_NAME = "dashboard"
         IMAGE_TAG = "v1"
-        REGISTRY_URL = "registry.college.local"   // ask faculty for exact URL
-        REGISTRY_IMAGE = "${REGISTRY_URL}/dashboard:${IMAGE_TAG}"
+        REGISTRY_URL = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+        REGISTRY_REPO = "2401036-dashboard"
+        IMAGE_NAME = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
         K8S_NAMESPACE = "2401036-dashboard"
     }
 
@@ -18,7 +19,7 @@ pipeline {
             }
         }
 
-        stage('Build Application (Maven)') {
+        stage('Build Application') {
             steps {
                 sh '''
                     cd app
@@ -30,21 +31,21 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build -t $REGISTRY_IMAGE .
+                    docker build -t $IMAGE_NAME .
                 '''
             }
         }
 
-        stage('Push Image to Registry') {
+        stage('Push Image to Nexus') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'registry-creds', // confirm ID with faculty
-                    usernameVariable: 'REG_USER',
-                    passwordVariable: 'REG_PASS'
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                        docker login $REGISTRY_URL -u $REG_USER -p $REG_PASS
-                        docker push $REGISTRY_IMAGE
+                        docker login $REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
+                        docker push $IMAGE_NAME
                     '''
                 }
             }
@@ -61,10 +62,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ CI/CD Pipeline completed successfully"
+            echo "✅ Deployment Successful"
         }
         failure {
-            echo "❌ CI/CD Pipeline failed"
+            echo "❌ Deployment Failed"
         }
     }
 }
