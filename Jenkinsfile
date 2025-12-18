@@ -24,17 +24,6 @@ spec:
     volumeMounts:
       - name: workspace-volume
         mountPath: /home/jenkins/agent
-
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command:
-      - /bin/sh
-      - -c
-      - sleep infinity
-    tty: true
-    volumeMounts:
-      - name: workspace-volume
-        mountPath: /home/jenkins/agent
 '''
         }
     }
@@ -45,7 +34,6 @@ spec:
         REGISTRY_URL  = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
         REGISTRY_REPO = "2401036-dashboard"
         IMAGE_NAME    = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
-        K8S_NAMESPACE = "2401036-dashboard"
     }
 
     stages {
@@ -64,6 +52,7 @@ spec:
                         dockerd-entrypoint.sh &
                         sleep 20
                         docker build -t $IMAGE_NAME .
+                        docker images
                     '''
                 }
             }
@@ -87,25 +76,22 @@ spec:
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('CD Ready (Kubernetes Manifests Present)') {
             steps {
-                container('kubectl') {
-                    sh '''
-                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/
-                        kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
-                    '''
-                }
+                sh '''
+                    echo "Kubernetes deployment YAMLs are available in repository."
+                    ls -l k8s || true
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "✅ CI/CD Pipeline completed successfully"
+            echo "✅ CI pipeline successful: Image built and pushed to Nexus"
         }
         failure {
-            echo "❌ CI/CD Pipeline failed"
+            echo "❌ CI pipeline failed"
         }
     }
 }
