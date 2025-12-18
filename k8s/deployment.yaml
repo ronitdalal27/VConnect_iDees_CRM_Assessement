@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: dashboard-deployment
   namespace: 2401036-dashboard
-  labels:
-    app: dashboard
 spec:
   replicas: 1
   selector:
@@ -15,8 +13,6 @@ spec:
       labels:
         app: dashboard
     spec:
-      imagePullSecrets:
-        - name: nexus-secret
       containers:
         - name: dashboard
           image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-dashboard/dashboard:v1
