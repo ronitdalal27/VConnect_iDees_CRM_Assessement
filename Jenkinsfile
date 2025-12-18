@@ -19,25 +19,30 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image (Maven inside Docker)') {
+        stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build -t $IMAGE_NAME .
-                '''
+                container('dind') {
+                    sh '''
+                        docker build -t $IMAGE_NAME .
+                        docker images
+                    '''
+                }
             }
         }
 
         stage('Push Image to Nexus') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'nexus-credentials',
-                    usernameVariable: 'NEXUS_USER',
-                    passwordVariable: 'NEXUS_PASS'
-                )]) {
-                    sh '''
-                        docker login $REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
-                        docker push $IMAGE_NAME
-                    '''
+                container('dind') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASS'
+                    )]) {
+                        sh '''
+                            docker login $REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
+                            docker push $IMAGE_NAME
+                        '''
+                    }
                 }
             }
         }
