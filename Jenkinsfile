@@ -1,33 +1,5 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml '''
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-
-  - name: dind
-    image: docker:dind
-    securityContext:
-      privileged: true
-    env:
-      - name: DOCKER_TLS_CERTDIR
-        value: ""
-    args:
-      - "--storage-driver=overlay2"
-      - "--insecure-registry=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
-
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command:
-      - /bin/sh
-      - -c
-      - sleep infinity
-    tty: true
-'''
-        }
-    }
+    agent any
 
     environment {
         APP_NAME      = "dashboard"
@@ -49,44 +21,36 @@ spec:
 
         stage('Build Docker Image') {
             steps {
-                container('dind') {
-                    sh '''
-                        dockerd-entrypoint.sh &
-                        sleep 20
-                        docker build -t $IMAGE_NAME .
-                    '''
-                }
+                sh '''
+                    docker build -t $IMAGE_NAME .
+                '''
             }
         }
 
         stage('Push Image to Nexus') {
             steps {
-                container('dind') {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USER',
-                        passwordVariable: 'NEXUS_PASS'
-                    )]) {
-                        sh '''
-                            docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                              -u $NEXUS_USER -p $NEXUS_PASS
-                            docker push $IMAGE_NAME
-                        '''
-                    }
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                          -u $NEXUS_USER -p $NEXUS_PASS
+                        docker push $IMAGE_NAME
+                    '''
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                container('kubectl') {
-                    sh '''
-                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/
-                        kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
-                        kubectl get svc -n $K8S_NAMESPACE
-                    '''
-                }
+                sh '''
+                    kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+                    kubectl apply -n $K8S_NAMESPACE -f k8s/
+                    kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
+                    kubectl get svc -n $K8S_NAMESPACE
+                '''
             }
         }
     }
