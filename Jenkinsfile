@@ -26,12 +26,12 @@ spec:
     }
 
     environment {
-        APP_NAME       = "dashboard"
-        IMAGE_TAG      = "v1"
-        REGISTRY_URL   = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
-        REGISTRY_REPO  = "2401036-dashboard"
-        IMAGE_NAME     = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
-        K8S_NAMESPACE  = "2401036-dashboard"
+        APP_NAME      = "dashboard"
+        IMAGE_TAG     = "v1"
+        REGISTRY_URL  = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+        REGISTRY_REPO = "2401036-dashboard"
+        IMAGE_NAME    = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
+        K8S_NAMESPACE = "2401036-dashboard"
     }
 
     stages {
@@ -47,6 +47,9 @@ spec:
             steps {
                 container('dind') {
                     sh '''
+                        dockerd-entrypoint.sh & 
+                        sleep 20
+                        docker info
                         docker build -t $IMAGE_NAME .
                         docker images
                     '''
@@ -65,7 +68,6 @@ spec:
                         sh '''
                             docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
                               -u $NEXUS_USER -p $NEXUS_PASS
-
                             docker push $IMAGE_NAME
                         '''
                     }
