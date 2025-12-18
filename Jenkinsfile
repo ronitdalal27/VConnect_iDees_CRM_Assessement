@@ -47,11 +47,9 @@ spec:
             steps {
                 container('dind') {
                     sh '''
-                        dockerd-entrypoint.sh & 
+                        dockerd-entrypoint.sh &
                         sleep 20
-                        docker info
                         docker build -t $IMAGE_NAME .
-                        docker images
                     '''
                 }
             }
@@ -66,8 +64,7 @@ spec:
                         passwordVariable: 'NEXUS_PASS'
                     )]) {
                         sh '''
-                            docker login http://nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                              -u $NEXUS_USER -p $NEXUS_PASS
+                            docker login http://$REGISTRY_URL -u $NEXUS_USER -p $NEXUS_PASS
                             docker push $IMAGE_NAME
                         '''
                     }
@@ -79,8 +76,19 @@ spec:
             steps {
                 container('kubectl') {
                     sh '''
+                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl delete secret nexus-secret -n $K8S_NAMESPACE --ignore-not-found=true
+                        kubectl create secret docker-registry nexus-secret \
+                          --docker-server=$REGISTRY_URL \
+                          --docker-username=student \
+                          --docker-password=Imcc@2025 \
+                          --docker-email=dummy@imcc.com \
+                          -n $K8S_NAMESPACE
+
                         kubectl apply -n $K8S_NAMESPACE -f k8s/
                         kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
+                        kubectl get svc -n $K8S_NAMESPACE
                     '''
                 }
             }
