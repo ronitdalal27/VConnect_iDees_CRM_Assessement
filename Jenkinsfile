@@ -5,6 +5,10 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  volumes:
+    - name: workspace-volume
+      emptyDir: {}
+
   containers:
 
   - name: dind
@@ -17,6 +21,9 @@ spec:
     env:
       - name: DOCKER_TLS_CERTDIR
         value: ""
+    volumeMounts:
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 
   - name: kubectl
     image: bitnami/kubectl:latest
@@ -25,6 +32,9 @@ spec:
       - -c
       - sleep infinity
     tty: true
+    volumeMounts:
+      - name: workspace-volume
+        mountPath: /home/jenkins/agent
 '''
         }
     }
@@ -53,9 +63,7 @@ spec:
                     sh '''
                         dockerd-entrypoint.sh &
                         sleep 20
-                        docker info
                         docker build -t $IMAGE_NAME .
-                        docker images
                     '''
                 }
             }
@@ -83,6 +91,7 @@ spec:
             steps {
                 container('kubectl') {
                     sh '''
+                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
                         kubectl apply -n $K8S_NAMESPACE -f k8s/
                         kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
                     '''
