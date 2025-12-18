@@ -19,16 +19,7 @@ pipeline {
             }
         }
 
-        stage('Build Application') {
-            steps {
-                sh '''
-                    cd app
-                    mvn clean package -DskipTests
-                '''
-            }
-        }
-
-        stage('Build Docker Image') {
+        stage('Build Docker Image (Maven inside Docker)') {
             steps {
                 sh '''
                     docker build -t $IMAGE_NAME .
@@ -62,10 +53,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment Successful"
+            echo "✅ CI/CD Pipeline completed successfully"
         }
         failure {
-            echo "❌ Deployment Failed"
+            echo "❌ CI/CD Pipeline failed"
         }
     }
 }
