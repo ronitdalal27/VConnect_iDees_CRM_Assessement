@@ -6,6 +6,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+
   - name: dind
     image: docker:dind
     args:
@@ -19,7 +20,10 @@ spec:
 
   - name: kubectl
     image: bitnami/kubectl:latest
-    command: ["cat"]
+    command:
+      - /bin/sh
+      - -c
+      - sleep infinity
     tty: true
 '''
         }
@@ -47,7 +51,7 @@ spec:
             steps {
                 container('dind') {
                     sh '''
-                        dockerd-entrypoint.sh & 
+                        dockerd-entrypoint.sh &
                         sleep 20
                         docker info
                         docker build -t $IMAGE_NAME .
