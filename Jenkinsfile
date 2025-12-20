@@ -29,8 +29,15 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
+    volumeMounts:
+    - name: docker-config
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
 
   volumes:
+  - name: docker-config
+    configMap:
+      name: docker-daemon-config
   - name: kubeconfig-secret
     secret:
       secretName: kubeconfig-secret
@@ -40,63 +47,44 @@ spec:
 
     stages {
 
-        stage('Clean Workspace') {
-            steps {
-                echo "🧹 Cleaning workspace"
-                deleteDir()
-            }
-        }
-
-        stage('Checkout Latest Code') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/master']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
-                    ]],
-                    extensions: [
-                        [$class: 'WipeWorkspace'],
-                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0]
-                    ]
-                ])
-
-                sh '''
-                    echo "===== CURRENT COMMIT ====="
-                    git log -1 --oneline
-                '''
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 container('dind') {
                     sh '''
-                        dockerd-entrypoint.sh &
                         sleep 15
                         docker build -t dashboard:latest .
+                        docker image ls
                     '''
                 }
             }
         }
 
-        stage('Login & Push to Nexus') {
+        stage('Login to Nexus') {
             steps {
                 container('dind') {
                     sh '''
                         docker login nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                        -u admin -p Changeme@2025
-
-                        docker tag dashboard:latest \
-                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
-
-                        docker push nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+                        -u student -p Imcc@2025
                     '''
                 }
             }
         }
 
-        stage('Deploy Dashboard') {
+        stage('Tag & Push Image') {
+            steps {
+                container('dind') {
+                    sh '''
+                        docker tag dashboard:latest \
+                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+
+                        docker push \
+                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Dashboard App') {
             steps {
                 container('kubectl') {
                     dir('k8s') {
@@ -108,9 +96,29 @@ spec:
                         kubectl apply -f ingress.yaml -n 2401036
 
                         kubectl delete pod -l app=dashboard -n 2401036 || true
-                        kubectl rollout restart deployment/dashboard-deployment -n 2401036
+
+                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
+                        sleep 5
+                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
                         '''
                     }
+                }
+            }
+        }
+
+        stage('Debug Info') {
+            steps {
+                container('kubectl') {
+                    sh '''
+                    echo "===== PODS ====="
+                    kubectl get pods -n 2401036
+
+                    echo "===== SERVICES ====="
+                    kubectl get svc -n 2401036
+
+                    echo "===== INGRESS ====="
+                    kubectl get ingress -n 2401036
+                    '''
                 }
             }
         }
