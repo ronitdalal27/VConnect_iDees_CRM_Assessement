@@ -29,15 +29,8 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
-    volumeMounts:
-    - name: docker-config
-      mountPath: /etc/docker/daemon.json
-      subPath: daemon.json
 
   volumes:
-  - name: docker-config
-    configMap:
-      name: docker-daemon-config
   - name: kubeconfig-secret
     secret:
       secretName: kubeconfig-secret
@@ -59,11 +52,11 @@ spec:
             }
         }
 
-        stage('Login to Nexus') {
+        stage('Login to Nexus (NodePort)') {
             steps {
                 container('dind') {
                     sh '''
-                        docker login nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                        docker login 127.0.0.1:30085 \
                         -u student -p Imcc@2025
                     '''
                 }
@@ -75,43 +68,42 @@ spec:
                 container('dind') {
                     sh '''
                         docker tag dashboard:latest \
-                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+                        127.0.0.1:30085/2401036-project/dashboard-2401036:latest
 
                         docker push \
-                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+                        127.0.0.1:30085/2401036-project/dashboard-2401036:latest
                     '''
                 }
             }
         }
 
         stage('Deploy Dashboard App') {
-        steps {
-            container('kubectl') {
-                dir('k8s') {
-                    sh '''
-                    kubectl get namespace 2401036 || kubectl create namespace 2401036
+            steps {
+                container('kubectl') {
+                    dir('k8s') {
+                        sh '''
+                        kubectl get namespace 2401036 || kubectl create namespace 2401036
 
-                    kubectl create secret docker-registry nexus-secret \
-                    --docker-server=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
-                    --docker-username=student \
-                    --docker-password=Imcc@2025 \
-                    --docker-email=student@imcc.com \
-                    -n 2401036 || true
+                        kubectl create secret docker-registry nexus-secret \
+                        --docker-server=127.0.0.1:30085 \
+                        --docker-username=student \
+                        --docker-password=Imcc@2025 \
+                        --docker-email=student@imcc.com \
+                        -n 2401036 || true
 
-                    kubectl apply -f deployment.yaml -n 2401036
-                    kubectl apply -f service.yaml -n 2401036
-                    kubectl apply -f ingress.yaml -n 2401036
+                        kubectl apply -f deployment.yaml -n 2401036
+                        kubectl apply -f service.yaml -n 2401036
+                        kubectl apply -f ingress.yaml -n 2401036
 
-                    kubectl delete pod -l app=dashboard -n 2401036 || true
-                    kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
-                    sleep 5
-                    kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
-                    '''
+                        kubectl delete pod -l app=dashboard -n 2401036 || true
+                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
+                        sleep 5
+                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
+                        '''
+                    }
                 }
             }
         }
-    }
-
 
         stage('Debug Info') {
             steps {

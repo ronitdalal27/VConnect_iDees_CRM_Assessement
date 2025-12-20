@@ -1,3 +1,6 @@
+# --------------------------------
+# Deployment (no PVC needed)
+# --------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,13 +8,6 @@ metadata:
   namespace: "2401036"
 spec:
   replicas: 1
-
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-
   selector:
     matchLabels:
       app: dashboard
@@ -20,15 +16,14 @@ spec:
     metadata:
       labels:
         app: dashboard
+
     spec:
       imagePullSecrets:
         - name: nexus-secret
 
-      terminationGracePeriodSeconds: 30
-
       containers:
         - name: dashboard
-          image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
+          image: 127.0.0.1:30085/2401036-project/dashboard-2401036:latest
           imagePullPolicy: Always
 
           ports:
