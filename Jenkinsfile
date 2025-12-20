@@ -85,26 +85,33 @@ spec:
         }
 
         stage('Deploy Dashboard App') {
-            steps {
-                container('kubectl') {
-                    dir('k8s') {
-                        sh '''
-                        kubectl get namespace 2401036 || kubectl create namespace 2401036
+        steps {
+            container('kubectl') {
+                dir('k8s') {
+                    sh '''
+                    kubectl get namespace 2401036 || kubectl create namespace 2401036
 
-                        kubectl apply -f deployment.yaml -n 2401036
-                        kubectl apply -f service.yaml -n 2401036
-                        kubectl apply -f ingress.yaml -n 2401036
+                    kubectl create secret docker-registry nexus-secret \
+                    --docker-server=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                    --docker-username=student \
+                    --docker-password=Imcc@2025 \
+                    --docker-email=student@imcc.com \
+                    -n 2401036 || true
 
-                        kubectl delete pod -l app=dashboard -n 2401036 || true
+                    kubectl apply -f deployment.yaml -n 2401036
+                    kubectl apply -f service.yaml -n 2401036
+                    kubectl apply -f ingress.yaml -n 2401036
 
-                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
-                        sleep 5
-                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
-                        '''
-                    }
+                    kubectl delete pod -l app=dashboard -n 2401036 || true
+                    kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
+                    sleep 5
+                    kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
+                    '''
                 }
             }
         }
+    }
+
 
         stage('Debug Info') {
             steps {
