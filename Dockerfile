@@ -1,29 +1,26 @@
 # ========= BUILD STAGE =========
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
+FROM nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/maven:3.9.6-eclipse-temurin-17 AS builder
 
 WORKDIR /build
 
-# Copy pom.xml first (for dependency caching)
+# Copy pom.xml first (dependency cache)
 COPY app/pom.xml ./pom.xml
 RUN mvn -B dependency:go-offline
 
-# Copy source code
+# Copy source
 COPY app/src ./src
 
-# Build the application
+# Build
 RUN mvn -B clean package -DskipTests
 
 
 # ========= RUNTIME STAGE =========
-FROM eclipse-temurin:17-jdk
+FROM nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/eclipse-temurin:17-jdk
 
 WORKDIR /app
 
-# Copy jar from build stage
 COPY --from=builder /build/target/*.jar app.jar
 
-# Expose Spring Boot port
 EXPOSE 8080
 
-# Run application
 ENTRYPOINT ["java","-jar","app.jar"]
