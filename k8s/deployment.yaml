@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dashboard-deployment
-  namespace: 2401036-dashboard
+  namespace: "2401036"
 spec:
   replicas: 1
   selector:
@@ -13,9 +13,25 @@ spec:
       labels:
         app: dashboard
     spec:
+      imagePullSecrets:
+        - name: nexus-secret
+
       containers:
         - name: dashboard
-          image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-dashboard/dashboard:v1
-          imagePullPolicy: Always
+          image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
           ports:
             - containerPort: 8080
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30

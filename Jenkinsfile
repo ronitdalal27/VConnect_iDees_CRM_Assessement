@@ -6,52 +6,45 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-
-  - name: docker
-    image: docker:27.1.1-cli
-    command: ["cat"]
-    tty: true
-    volumeMounts:
-      - name: docker-sock
-        mountPath: /var/run/docker.sock
-
   - name: kubectl
-    image: bitnami/kubectl:1.29
+    image: bitnami/kubectl:latest
     command: ["cat"]
     tty: true
+    securityContext:
+      runAsUser: 0
+      readOnlyRootFilesystem: false
+    env:
+    - name: KUBECONFIG
+      value: /kube/config
+    volumeMounts:
+    - name: kubeconfig-secret
+      mountPath: /kube/config
+      subPath: kubeconfig
+
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
 
   volumes:
-    - name: docker-sock
-      hostPath:
-        path: /var/run/docker.sock
+  - name: kubeconfig-secret
+    secret:
+      secretName: kubeconfig-secret
 '''
         }
     }
 
-    environment {
-        APP_NAME      = "dashboard"
-        IMAGE_TAG     = "v1"
-        REGISTRY_URL  = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
-        REGISTRY_REPO = "2401036-dashboard"
-        IMAGE_NAME    = "${REGISTRY_URL}/${REGISTRY_REPO}/${APP_NAME}:${IMAGE_TAG}"
-        K8S_NAMESPACE = "2401036-dashboard"
-    }
-
     stages {
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'master',
-                    url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
-            }
-        }
 
         stage('Build Docker Image') {
             steps {
-                container('docker') {
+                container('dind') {
                     sh '''
-                        docker version
-                        docker build -t $IMAGE_NAME .
+                        sleep 15
+                        docker build -t dashboard:latest .
                     '''
                 }
             }
@@ -59,46 +52,38 @@ spec:
 
         stage('Login & Push to Nexus') {
             steps {
-                container('docker') {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USER',
-                        passwordVariable: 'NEXUS_PASS'
-                    )]) {
-                        sh '''
-                            echo "$NEXUS_PASS" | docker login $REGISTRY_URL -u "$NEXUS_USER" --password-stdin
-                            docker push $IMAGE_NAME
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                container('kubectl') {
+                container('dind') {
                     sh '''
-                        kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+                        docker login nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                        -u admin -p Changeme@2025
 
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/deployment.yaml
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/service.yaml
+                        docker tag dashboard:latest \
+                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
 
-                        kubectl rollout status deployment/dashboard-deployment -n $K8S_NAMESPACE
-
-                        echo "===== Service Details ====="
-                        kubectl get svc -n $K8S_NAMESPACE
+                        docker push nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
                     '''
                 }
             }
         }
-    }
 
-    post {
-        success {
-            echo "✅ CI/CD Pipeline completed successfully"
-        }
-        failure {
-            echo "❌ CI/CD Pipeline failed"
+        stage('Deploy Dashboard') {
+            steps {
+                container('kubectl') {
+                    dir('k8s') {
+                        sh '''
+                        kubectl get namespace 2401036 || kubectl create namespace 2401036
+                        kubectl apply -f deployment.yaml -n 2401036
+                        kubectl apply -f service.yaml -n 2401036
+                        kubectl apply -f ingress.yaml -n 2401036
+
+                        kubectl delete pod -l app=dashboard -n 2401036 || true
+                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
+                        sleep 5
+                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
+                        '''
+                    }
+                }
+            }
         }
     }
 }
