@@ -52,11 +52,11 @@ spec:
             }
         }
 
-        stage('Login to Nexus (NodePort)') {
+        stage('Login to Nexus (SERVICE DNS)') {
             steps {
                 container('dind') {
                     sh '''
-                        docker login 127.0.0.1:30085 \
+                        docker login nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
                         -u student -p Imcc@2025
                     '''
                 }
@@ -68,10 +68,10 @@ spec:
                 container('dind') {
                     sh '''
                         docker tag dashboard:latest \
-                        127.0.0.1:30085/2401036-project/dashboard-2401036:latest
+                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
 
                         docker push \
-                        127.0.0.1:30085/2401036-project/dashboard-2401036:latest
+                        nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
                     '''
                 }
             }
@@ -95,10 +95,8 @@ spec:
                         kubectl apply -f service.yaml -n 2401036
                         kubectl apply -f ingress.yaml -n 2401036
 
-                        kubectl delete pod -l app=dashboard -n 2401036 || true
-                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
-                        sleep 5
-                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
+                        kubectl rollout restart deployment dashboard-deployment -n 2401036
+                        kubectl rollout status deployment dashboard-deployment -n 2401036
                         '''
                     }
                 }
