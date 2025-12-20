@@ -40,13 +40,40 @@ spec:
 
     stages {
 
+        stage('Clean Workspace') {
+            steps {
+                echo "🧹 Cleaning workspace"
+                deleteDir()
+            }
+        }
+
+        stage('Checkout Latest Code') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/ronitdalal27/VConnect_iDees_CRM_Assessement.git'
+                    ]],
+                    extensions: [
+                        [$class: 'WipeWorkspace'],
+                        [$class: 'CloneOption', noTags: false, shallow: false, depth: 0]
+                    ]
+                ])
+
+                sh '''
+                    echo "===== CURRENT COMMIT ====="
+                    git log -1 --oneline
+                '''
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 container('dind') {
                     sh '''
                         dockerd-entrypoint.sh &
                         sleep 15
-                        docker version
                         docker build -t dashboard:latest .
                     '''
                 }
@@ -81,9 +108,7 @@ spec:
                         kubectl apply -f ingress.yaml -n 2401036
 
                         kubectl delete pod -l app=dashboard -n 2401036 || true
-                        kubectl scale deployment dashboard-deployment --replicas=0 -n 2401036
-                        sleep 5
-                        kubectl scale deployment dashboard-deployment --replicas=1 -n 2401036
+                        kubectl rollout restart deployment/dashboard-deployment -n 2401036
                         '''
                     }
                 }
