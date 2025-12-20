@@ -29,24 +29,26 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
-    volumeMounts:
-    - name: docker-config
-      mountPath: /etc/docker/daemon.json
-      subPath: daemon.json
-
-  volumes:
-  - name: kubeconfig-secret
-    secret:
-      secretName: kubeconfig-secret
-
-  - name: docker-config
-    configMap:
-      name: docker-daemon-config
 '''
         }
     }
 
     stages {
+
+        stage('Start Docker Daemon (HTTP Nexus)') {
+            steps {
+                container('dind') {
+                    sh '''
+                        dockerd \
+                          --host=unix:///var/run/docker.sock \
+                          --insecure-registry nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 \
+                          --insecure-registry 127.0.0.1:30085 &
+                        sleep 20
+                        docker info
+                    '''
+                }
+            }
+        }
 
         stage('Login to Nexus (HTTP)') {
             steps {
