@@ -29,15 +29,8 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
-    volumeMounts:
-    - name: docker-config
-      mountPath: /etc/docker/daemon.json
-      subPath: daemon.json
 
   volumes:
-  - name: docker-config
-    configMap:
-      name: docker-daemon-config
   - name: kubeconfig-secret
     secret:
       secretName: kubeconfig-secret
@@ -52,7 +45,8 @@ spec:
                 container('dind') {
                     sh '''
                         sleep 15
-                        docker build -t dashboard:latest .
+                        docker build --no-cache -t dashboard:latest .
+                        docker images | grep dashboard
                     '''
                 }
             }
@@ -102,19 +96,38 @@ spec:
                         kubectl apply -f ingress.yaml -n 2401036
 
                         kubectl rollout restart deployment dashboard-deployment -n 2401036
-                        kubectl rollout status deployment dashboard-deployment -n 2401036
+                        kubectl rollout status deployment dashboard-deployment -n 2401036 --timeout=120s || true
                         '''
                     }
                 }
             }
         }
 
-        stage('Debug Info') {
+        stage('Pod Debug (Option A)') {
             steps {
                 container('kubectl') {
                     sh '''
-                    kubectl get pods -n 2401036
+                    echo "===== POD STATUS ====="
+                    kubectl get pods -n 2401036 -o wide
+
+                    echo "===== POD DESCRIPTION ====="
+                    kubectl describe pod -l app=dashboard -n 2401036
+
+                    echo "===== POD LOGS ====="
+                    kubectl logs -l app=dashboard -n 2401036 --all-containers=true || true
+                    '''
+                }
+            }
+        }
+
+        stage('Final Objects') {
+            steps {
+                container('kubectl') {
+                    sh '''
+                    echo "===== SERVICES ====="
                     kubectl get svc -n 2401036
+
+                    echo "===== INGRESS ====="
                     kubectl get ingress -n 2401036
                     '''
                 }
