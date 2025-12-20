@@ -29,8 +29,15 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
+    volumeMounts:
+    - name: docker-config
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
 
   volumes:
+  - name: docker-config
+    configMap:
+      name: docker-daemon-config
   - name: kubeconfig-secret
     secret:
       secretName: kubeconfig-secret
@@ -46,13 +53,12 @@ spec:
                     sh '''
                         sleep 15
                         docker build -t dashboard:latest .
-                        docker image ls
                     '''
                 }
             }
         }
 
-        stage('Login to Nexus (SERVICE DNS)') {
+        stage('Login to Nexus') {
             steps {
                 container('dind') {
                     sh '''
@@ -107,13 +113,8 @@ spec:
             steps {
                 container('kubectl') {
                     sh '''
-                    echo "===== PODS ====="
                     kubectl get pods -n 2401036
-
-                    echo "===== SERVICES ====="
                     kubectl get svc -n 2401036
-
-                    echo "===== INGRESS ====="
                     kubectl get ingress -n 2401036
                     '''
                 }
