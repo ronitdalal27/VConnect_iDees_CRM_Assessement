@@ -6,6 +6,7 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+
   - name: kubectl
     image: bitnami/kubectl:latest
     command: ["cat"]
@@ -43,7 +44,9 @@ spec:
             steps {
                 container('dind') {
                     sh '''
+                        dockerd-entrypoint.sh &
                         sleep 15
+                        docker version
                         docker build -t dashboard:latest .
                     '''
                 }
@@ -72,6 +75,7 @@ spec:
                     dir('k8s') {
                         sh '''
                         kubectl get namespace 2401036 || kubectl create namespace 2401036
+
                         kubectl apply -f deployment.yaml -n 2401036
                         kubectl apply -f service.yaml -n 2401036
                         kubectl apply -f ingress.yaml -n 2401036

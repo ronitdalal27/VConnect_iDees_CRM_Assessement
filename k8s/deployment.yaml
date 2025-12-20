@@ -21,17 +21,3 @@ spec:
           image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/2401036-project/dashboard-2401036:latest
           ports:
             - containerPort: 8080
-
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 30
